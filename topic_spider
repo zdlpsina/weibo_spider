@@ -1,0 +1,75 @@
+from selenium import webdriver
+import time
+import re
+
+#全局变量
+driver = webdriver.Chrome()
+
+
+def loginWeibo(username, password):
+    driver.get('https://passport.weibo.cn/signin/login')
+    time.sleep(3)
+
+    driver.find_element_by_id("loginName").send_keys(username)
+    driver.find_element_by_id("loginPassword").send_keys(password)
+    driver.find_element_by_id("loginAction").click()
+    
+    #这里只是看一下cookie内容，下面不会用到这个cookie值，因为driver会把cookie自动带过去
+    cookies = driver.get_cookies()
+    cookie_list = []
+    for dict in cookies:
+        cookie = dict['name'] + '=' + dict['value']
+        cookie_list.append(cookie)
+    cookie = ';'.join(cookie_list)
+    print (cookie)
+
+    #driver.close()
+
+    username = '****'             # 输入微博账号
+    password = '*****'             # 输入密码
+    loginWeibo(username, password)      # 要先登录，否则抓取不了微博内容
+    driver.get('https://weibo.cn/search/?tf=5_012')
+    time.sleep(3)
+   driver.find_element_by_name("keyword").send_keys("七中事件")
+   driver.find_element_by_name("smblog").click()
+   pageList = driver.find_element_by_xpath("//div[@class='pa']")
+   print(pageList.text)
+   
+   
+   pattern = r"\d+\d*"         # 匹配数字，只包含整数
+   pageArr = re.findall(pattern, pageList.text)
+   totalPages = pageArr[1]     # 总共有多少页微博
+   print(totalPages)
+   pageNum = 1                 # 第几页
+   numInCurPage = 1            # 当前页的第几条微博内容
+   curNum = 0                  # 全部微博中的第几条微博
+   contentPath = "//div[@class='c'][{0}]"
+   topic="七中事件"
+    
+    
+        while(pageNum <= int(totalPages)):
+        try:
+            contentUrl = "https://weibo.cn/search/mblog?hideSearchFrame=&keyword=" + topic + "&page=" + str(pageNum)
+            driver.get(contentUrl)
+            content = driver.find_element_by_xpath(contentPath.format(numInCurPage)).text
+            #print("\n" + content)                  # 微博内容，包含原创和转发
+            if "设置:皮肤.图片.条数.隐私" not in content:
+                numInCurPage += 1
+                curNum += 1
+                with open("topic_weibocontent.txt", "a", encoding = "utf8") as file:
+                    file.write(str(curNum) + '\r\n' + content + '\r\n\r\n') 
+            else:
+                pageNum += 1                        # 抓取新一页的内容
+                numInCurPage = 1                    # 每一页都是从第1条开始抓
+                time.sleep(30)                      # 要隔20秒，否则会被封
+        except exception as e:
+            print("curNum:" + curNum)
+            print(e)
+        finally:
+            pass
+    print("Load weibo content finished!")     
+    
+    
+    
+    
+    
